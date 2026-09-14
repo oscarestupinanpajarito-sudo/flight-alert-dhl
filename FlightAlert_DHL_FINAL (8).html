@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flight Alert – DHL BOG</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#f0f0ee;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.dhl{background:#FFCC00;color:#D40511;font-weight:700;font-size:13px;padding:3px 8px;border-radius:4px}
+.title{font-size:16px;font-weight:600}
+.sub{font-size:11px;color:#999}
+.content{padding:12px}
+.card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;margin-bottom:10px;overflow:hidden}
+.card-header{padding:12px 14px;display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.av-lt{background:#E6F1FB;color:#0C447C}
+.av-av{background:#FCEBEB;color:#A32D2D}
+.info{flex:1}
+.airline{font-size:14px;font-weight:600}
+.flight{font-size:11px;color:#999}
+.pill{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
+.pill-p{background:#f0f0ee;color:#999}
+.pill-ok{background:#EAF3DE;color:#3B6D11}
+.pill-inc{background:#FAEEDA;color:#854F0B}
+.pill-no{background:#FCEBEB;color:#A32D2D}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #e0e0e0}
+.stat{padding:8px;text-align:center;border-right:1px solid #e0e0e0}
+.stat:last-child{border-right:none}
+.stat-n{font-size:18px;font-weight:600}
+.stat-l{font-size:9px;color:#999;text-transform:uppercase}
+.form-area{border-top:1px solid #e0e0e0;padding:10px 14px}
+.btn-toggle{width:100%;padding:9px;font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;border:1px solid #e0e0e0;background:transparent;color:#1a1a1a}
+.form{display:none;margin-top:10px}
+.form.open{display:block}
+.lbl{font-size:11px;color:#999;margin-bottom:5px;font-weight:500;text-transform:uppercase}
+.input{width:100%;font-size:13px;padding:8px 10px;border-radius:10px;border:1px solid #e0e0e0;background:#f7f7f5;color:#1a1a1a;font-family:inherit;margin-bottom:8px}
+.input:focus{outline:none;border-color:#185FA5}
+.btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+.opt{padding:8px 4px;font-size:11px;font-weight:600;cursor:pointer;border-radius:10px;border:1px solid #e0e0e0;background:transparent;color:#555;text-align:center}
+.opt.sel-c{background:#EAF3DE;color:#3B6D11;border-color:#639922}
+.opt.sel-i{background:#FAEEDA;color:#854F0B;border-color:#EF9F27}
+.opt.sel-n{background:#FCEBEB;color:#A32D2D;border-color:#E24B4A}
+.save{width:100%;padding:10px;background:#185FA5;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer}
+.save:disabled{opacity:.4}
+.err{font-size:12px;color:#A32D2D;margin-bottom:6px;display:none}
+.done-msg{font-size:13px;color:#3B6D11;font-weight:500;padding:8px 0;text-align:center}
+.tab-bar{display:flex;border-bottom:1px solid #e0e0e0;background:#fff}
+.tab{flex:1;padding:11px 0;font-size:13px;font-weight:500;text-align:center;color:#999;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent}
+.tab.active{color:#0C447C;border-bottom:2px solid #185FA5}
+.view{display:none;padding:12px}
+.view.active{display:block}
+.sup-card{background:#fff;border:1px solid #e0e0e0;border-radius:14px;margin-bottom:8px;padding:12px 14px}
+.sup-top{display:flex;justify-content:space-between;align-items:flex-start}
+.sup-name{font-size:14px;font-weight:600}
+.sup-meta{font-size:11px;color:#999;margin-top:2px}
+.sup-obs{font-size:12px;color:#555;background:#f7f7f5;border-radius:8px;padding:6px 10px;margin-top:8px;border-left:3px solid #185FA5}
+.sup-cond{font-size:11px;color:#999;margin-top:5px}
+.empty{text-align:center;padding:40px 20px;color:#999;font-size:13px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.metric{background:#fff;border:1px solid #e0e0e0;border-radius:14px;padding:12px;text-align:center}
+.metric-n{font-size:24px;font-weight:700}
+.metric-l{font-size:11px;color:#999;margin-top:2px}
+.refresh{font-size:12px;color:#185FA5;background:none;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer;padding:5px 10px;float:right}
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="dhl">DHL</span>
+  <div><div class="title">Flight Alert BOG</div><div class="sub">Linehaul · Costas</div></div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('conductor')">✈ Conductor</button>
+  <button class="tab" onclick="switchTab('supervisor')">📊 Supervisor</button>
+</div>
+
+<div class="view active" id="view-conductor">
+  <p style="font-size:11px;color:#999;margin-bottom:10px" id="fecha-bar"></p>
+  <div id="cards"></div>
+</div>
+
+<div class="view" id="view-supervisor">
+  <button class="refresh" onclick="loadSup()">↻ Actualizar</button>
+  <div style="clear:both;height:8px"></div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-n" id="m-total">—</div><div class="metric-l">Vuelos hoy</div></div>
+    <div class="metric"><div class="metric-n" id="m-rep">—</div><div class="metric-l">Reportados</div></div>
+    <div class="metric"><div class="metric-n" id="m-piezas">—</div><div class="metric-l">Piezas</div></div>
+    <div class="metric"><div class="metric-n" id="m-kg">—</div><div class="metric-l">Kg</div></div>
+  </div>
+  <div id="sup-list"><div class="empty">Toca Actualizar para ver reportes.</div></div>
+</div>
+
+<script>
+const SCRIPT = 'https://script.google.com/macros/s/AKfycbyFZlDxdTUgamW5lgi8qjfT0C6ihzm4tMDXQjVWpGR7S_1quCFyLy0S7HWjQKswft3k/exec';
+
+const VUELOS = [
+  {id:'latam1', aerolinea:'LATAM Cargo', av:'LT', avClass:'av-lt', vuelo:'035-08077893', guias:[{num:'035-08077893',piezas:3,kg:41}]},
+  {id:'av1', aerolinea:'AV Carga (Avianca)', av:'AV', avClass:'av-av', vuelo:'20586408', guias:[{num:'20586408',piezas:2,kg:40}]},
+];
+
+const sel = {};
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${t}')"]`).classList.add('active');
+  document.getElementById('view-'+t).classList.add('active');
+  if(t==='supervisor') loadSup();
+}
+
+function renderConductor(){
+  const d = new Date();
+  document.getElementById('fecha-bar').textContent = '📅 ' + d.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'short'}) + ' · BOG · Material pendiente';
+  const c = document.getElementById('cards');
+  c.innerHTML = VUELOS.map(v=>{
+    const tp = v.guias.reduce((s,g)=>s+g.piezas,0);
+    const tk = v.guias.reduce((s,g)=>s+g.kg,0);
+    const guiasHTML = v.guias.map(g=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px"><span style="font-weight:600;font-family:monospace">${g.num}</span><span style="color:#999">${g.piezas} pzas · ${g.kg} kg</span></div>`).join('');
+    return `<div class="card" id="card-${v.id}">
+      <div class="card-header">
+        <div class="avatar ${v.avClass}">${v.av}</div>
+        <div class="info"><div class="airline">${v.aerolinea}</div><div class="flight">${v.vuelo}</div></div>
+        <span class="pill pill-p" id="pill-${v.id}">Pendiente</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-n">${v.guias.length}</div><div class="stat-l">Guías</div></div>
+        <div class="stat"><div class="stat-n">${tp}</div><div class="stat-l">Piezas</div></div>
+        <div class="stat"><div class="stat-n">${tk}</div><div class="stat-l">Kg</div></div>
+      </div>
+      <div style="padding:6px 14px;border-top:1px solid #e0e0e0">${guiasHTML}</div>
+      <div class="form-area">
+        <button class="btn-toggle" onclick="toggleForm('${v.id}')">📋 Reportar recogida</button>
+        <div class="form" id="form-${v.id}">
+          <div class="lbl">Tu nombre</div>
+          <input class="input" id="cond-${v.id}" placeholder="Nombre del conductor" type="text">
+          <div class="lbl">Estado</div>
+          <div class="btns">
+            <button class="opt" id="bc-${v.id}" onclick="setEst('${v.id}','completo')">✓ Completo</button>
+            <button class="opt" id="bi-${v.id}" onclick="setEst('${v.id}','incompleto')">~ Incompleto</button>
+            <button class="opt" id="bn-${v.id}" onclick="setEst('${v.id}','nollego')">✗ No llegó</button>
+          </div>
+          <div class="lbl">Observaciones</div>
+          <textarea class="input" id="obs-${v.id}" rows="2" placeholder="Detalle si hubo algún problema..."></textarea>
+          <div class="err" id="err-${v.id}">Selecciona un estado.</div>
+          <button class="save" id="sav-${v.id}" onclick="guardar('${v.id}')" disabled>Guardar reporte</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleForm(id){
+  const f = document.getElementById('form-'+id);
+  document.querySelectorAll('.form').forEach(e=>e.classList.remove('open'));
+  f.classList.add('open');
+}
+
+function setEst(id,est){
+  sel[id]=est;
+  document.getElementById('bc-'+id).className='opt'+(est==='completo'?' sel-c':'');
+  document.getElementById('bi-'+id).className='opt'+(est==='incompleto'?' sel-i':'');
+  document.getElementById('bn-'+id).className='opt'+(est==='nollego'?' sel-n':'');
+  document.getElementById('err-'+id).style.display='none';
+  document.getElementById('sav-'+id).disabled=false;
+}
+
+async function guardar(id){
+  if(!sel[id]){document.getElementById('err-'+id).style.display='block';return;}
+  const v = VUELOS.find(x=>x.id===id);
+  const conductor = document.getElementById('cond-'+id).value.trim()||'Sin nombre';
+  const obs = document.getElementById('obs-'+id).value.trim();
+  const ts = new Date().toLocaleString('es-CO');
+  const tp = v.guias.reduce((s,g)=>s+g.piezas,0);
+  const tk = v.guias.reduce((s,g)=>s+g.kg,0);
+
+  const btn = document.getElementById('sav-'+id);
+  btn.textContent='Guardando...';
+  btn.disabled=true;
+
+  const params = new URLSearchParams({
+    accion:'reporte', timestamp:ts, conductor, aerolinea:v.aerolinea,
+    vuelo:v.vuelo, guias:v.guias.map(g=>g.num).join(', '),
+    piezas:tp, kg:tk, estado:sel[id], observaciones:obs
+  });
+
+  try {
+    const img = new Image();
+    img.src = SCRIPT + '?' + params.toString();
+    await new Promise(r=>setTimeout(r,2000));
+  } catch(e){}
+
+  const estMap = {completo:{pill:'pill-ok',txt:'Recibido ✓'},incompleto:{pill:'pill-inc',txt:'Incompleto'},nollego:{pill:'pill-no',txt:'No llegó'}};
+  const em = estMap[sel[id]];
+  document.getElementById('pill-'+id).className='pill '+em.pill;
+  document.getElementById('pill-'+id).textContent=em.txt;
+  document.getElementById('form-'+id).innerHTML=`<div class="done-msg">✓ Reporte enviado — ${em.txt}</div>`;
+}
+
+async function loadSup(){
+  document.getElementById('sup-list').innerHTML='<div class="empty">Cargando...</div>';
+  const tp = VUELOS.reduce((s,v)=>s+v.guias.reduce((ss,g)=>ss+g.piezas,0),0);
+  const tk = VUELOS.reduce((s,v)=>s+v.guias.reduce((ss,g)=>ss+g.kg,0),0);
+  document.getElementById('m-total').textContent=VUELOS.length;
+  document.getElementById('m-piezas').textContent=tp;
+  document.getElementById('m-kg').textContent=tk+'kg';
+  try{
+    const img = new Image();
+    img.src = SCRIPT + '?accion=listar&t='+Date.now();
+    await new Promise(r=>setTimeout(r,2000));
+    const res = await fetch(SCRIPT+'?accion=listar&t='+Date.now());
+    const data = await res.json();
+    const lista = data.reportes||[];
+    document.getElementById('m-rep').textContent=lista.length+'/'+VUELOS.length;
+    if(lista.length===0){document.getElementById('sup-list').innerHTML='<div class="empty">Sin reportes aún.</div>';return;}
+    const em={completo:'<span style="color:#3B6D11">✓ Recibido</span>',incompleto:'<span style="color:#854F0B">~ Incompleto</span>',nollego:'<span style="color:#A32D2D">✗ No llegó</span>'};
+    document.getElementById('sup-list').innerHTML=lista.slice().reverse().map(r=>`
+      <div class="sup-card">
+        <div class="sup-top"><div><div class="sup-name">${r.aerolinea}</div><div class="sup-meta">${r.vuelo} · ${r.piezas} pzas · ${r.kg} kg</div></div><div>${em[r.estado]||r.estado}</div></div>
+        ${r.observaciones?`<div class="sup-obs">💬 ${r.observaciones}</div>`:''}
+        <div class="sup-cond">👤 ${r.conductor||'—'} · ${r.timestamp||'—'}</div>
+      </div>`).join('');
+  }catch(e){document.getElementById('sup-list').innerHTML='<div class="empty">Error cargando reportes.</div>';}
+}
+
+renderConductor();
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<title>Flight Alert – DHL Linehaul BOG</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --accent:#185FA5;--accent-light:#E6F1FB;--accent-text:#0C447C;
+    --success:#3B6D11;--success-light:#EAF3DE;
+    --warning:#854F0B;--warning-light:#FAEEDA;
+    --danger:#A32D2D;--danger-light:#FCEBEB;
+    --border:#e0e0e0;--surface:#fff;--surface-1:#f7f7f5;
+    --text:#1a1a1a;--text-2:#555;--text-3:#999;
+    --radius:10px;--card-radius:14px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f0ee;color:var(--text);min-height:100vh}
+  
+  /* HEADER */
+  .app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px 10px;position:sticky;top:0;z-index:10}
+  .header-row{display:flex;align-items:center;justify-content:space-between}
+  .logo-area{display:flex;align-items:center;gap:10px}
+  .dhl-badge{background:#FFCC00;color:#D40511;font-weight:700;font-size:13px;padding:3px 8px;border-radius:4px;letter-spacing:.5px}
+  .app-title{font-size:16px;font-weight:600;color:var(--text)}
+  .app-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+  .live-indicator{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--success)}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#639922;animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* TABS */
+  .tab-bar{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);background:var(--surface)}
+  .tab{padding:11px 0;font-size:13px;font-weight:500;text-align:center;color:var(--text-3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .18s}
+  .tab.active{color:var(--accent-text);border-bottom:2px solid var(--accent)}
+
+  /* VIEWS */
+  .view{display:none;padding:12px 12px 80px}
+  .view.active{display:block}
+
+  /* DATE BAR */
+  .date-bar{font-size:11px;color:var(--text-3);margin-bottom:10px;padding:0 2px;display:flex;align-items:center;gap:6px}
+  .filter-badge{background:var(--accent-light);color:var(--accent-text);font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+
+  /* AIRLINE CARD */
+  .airline-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);margin-bottom:10px;overflow:hidden}
+  .card-header{display:flex;align-items:center;gap:10px;padding:12px 14px}
+  .airline-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .av-latam{background:#E6F1FB;color:#0C447C}
+  .av-avianca{background:#FCEBEB;color:#A32D2D}
+  .av-other{background:#EAF3DE;color:#27500A}
+  .card-info{flex:1;min-width:0}
+  .airline-name{font-size:14px;font-weight:600;color:var(--text)}
+  .flight-num{font-size:11px;color:var(--text-3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status-pill{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+  .pill-pending{background:#f0f0ee;color:var(--text-3)}
+  .pill-done{background:var(--success-light);color:var(--success)}
+  .pill-partial{background:var(--warning-light);color:var(--warning)}
+  .pill-missing{background:var(--danger-light);color:var(--danger)}
+
+  /* STATS ROW */
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border)}
+  .stat-cell{padding:8px 6px;text-align:center;border-right:1px solid var(--border)}
+  .stat-cell:last-child{border-right:none}
+  .stat-num{font-size:18px;font-weight:600;color:var(--text)}
+  .stat-lbl{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+
+  /* GUIAS LIST */
+  .guias-list{border-top:1px solid var(--border);padding:8px 14px}
+  .guia-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px}
+  .guia-row:last-child{border-bottom:none}
+  .guia-num{font-weight:600;color:var(--text);font-family:monospace;font-size:13px}
+  .guia-detail{color:var(--text-3)}
+
+  /* REPORT SECTION */
+  .report-area{border-top:1px solid var(--border);padding:10px 14px}
+  .toggle-report-btn{width:100%;padding:9px;font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text);display:flex;align-items:center;justify-content:center;gap:6px}
+  .toggle-report-btn svg{width:15px;height:15px}
+  .report-form{margin-top:10px;display:none}
+  .report-form.open{display:block}
+  .form-label{font-size:11px;color:var(--text-3);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+  .estado-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+  .estado-btn{padding:8px 4px;font-size:11px;font-weight:600;cursor:pointer;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text-2);text-align:center;transition:all .15s}
+  .estado-btn.sel-completo{background:var(--success-light);color:var(--success);border-color:#639922}
+  .estado-btn.sel-incompleto{background:var(--warning-light);color:var(--warning);border-color:#EF9F27}
+  .estado-btn.sel-nollego{background:var(--danger-light);color:var(--danger);border-color:#E24B4A}
+  .obs-field{width:100%;font-size:13px;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-1);color:var(--text);resize:none;font-family:inherit;margin-bottom:8px}
+  .obs-field:focus{outline:none;border-color:var(--accent)}
+  .conductor-field{width:100%;font-size:13px;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-1);color:var(--text);font-family:inherit;margin-bottom:8px}
+  .conductor-field:focus{outline:none;border-color:var(--accent)}
+  .submit-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+  .submit-btn:disabled{opacity:.4;cursor:not-allowed}
+  .submit-btn.sending{opacity:.6}
+  .form-err{font-size:12px;color:var(--danger);margin-bottom:6px;display:none}
+
+  /* SUPERVISOR */
+  .sup-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .metric-card{background:var(--surface);border-radius:var(--card-radius);padding:12px 14px;border:1px solid var(--border)}
+  .metric-num{font-size:26px;font-weight:700;color:var(--text)}
+  .metric-lbl{font-size:11px;color:var(--text-3);margin-top:2px}
+  .sup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);margin-bottom:8px;padding:12px 14px}
+  .sup-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+  .sup-airline{font-size:14px;font-weight:600;color:var(--text)}
+  .sup-meta{font-size:11px;color:var(--text-3);margin-top:2px}
+  .sup-obs{font-size:12px;color:var(--text-2);background:var(--surface-1);border-radius:8px;padding:6px 10px;margin-top:8px;border-left:3px solid var(--accent)}
+  .sup-conductor{font-size:11px;color:var(--text-3);margin-top:5px}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text-3)}
+  .empty-icon{font-size:36px;margin-bottom:10px;display:block}
+  .refresh-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .refresh-btn{font-size:12px;color:var(--accent-text);background:none;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;padding:5px 10px;display:flex;align-items:center;gap:4px}
+
+  /* SETUP BANNER */
+  .setup-banner{background:#FAEEDA;border:1px solid #EF9F27;border-radius:var(--card-radius);padding:12px 14px;margin-bottom:14px;font-size:12px;color:#633806}
+  .setup-banner strong{display:block;margin-bottom:4px;font-size:13px}
+  .setup-banner a{color:var(--accent-text);font-weight:600}
+
+  /* SPINNER */
+  .spinner{width:16px;height:16px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* CONFIG MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal-box{background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:420px}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:4px}
+  .modal-sub{font-size:12px;color:var(--text-3);margin-bottom:14px}
+  .modal-input{width:100%;font-size:13px;padding:9px 11px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-1);color:var(--text);font-family:inherit;margin-bottom:8px}
+  .modal-input:focus{outline:none;border-color:var(--accent)}
+  .modal-save{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px}
+  .modal-cancel{width:100%;padding:10px;background:transparent;color:var(--text-3);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="header-row">
+    <div class="logo-area">
+      <span class="dhl-badge">DHL</span>
+      <div>
+        <div class="app-title">Flight Alert</div>
+        <div class="app-sub">Linehaul BOG · Costas</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="live-indicator"><span class="live-dot"></span>En vivo</div>
+      <button onclick="openConfig()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 8px;cursor:pointer;font-size:18px" title="Configurar">⚙</button>
+    </div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('conductor')" id="tab-conductor">✈ Conductor</button>
+  <button class="tab" onclick="switchTab('supervisor')" id="tab-supervisor">📊 Supervisor</button>
+</div>
+
+<!-- VISTA CONDUCTOR -->
+<div class="view active" id="view-conductor">
+  <div id="setup-banner-conductor" class="setup-banner" style="display:none">
+    <strong>⚠ Configura el Google Sheet</strong>
+    Los reportes se guardan localmente. Toca ⚙ arriba para ingresar la URL del script de Google Sheets y activar la sincronización en tiempo real.
+  </div>
+  <div class="date-bar" id="date-bar">
+    Cargando guías...
+  </div>
+  <div id="cards-container">
+    <div class="empty-state"><span class="empty-icon">✈</span>Cargando información de vuelos...</div>
+  </div>
+</div>
+
+<!-- VISTA SUPERVISOR -->
+<div class="view" id="view-supervisor">
+  <div id="setup-banner-sup" class="setup-banner" style="display:none">
+    <strong>⚠ Google Sheet no configurado</strong>
+    Los reportes solo se ven localmente. Configura el script URL (⚙) para ver todos los reportes en tiempo real.
+  </div>
+  <div class="refresh-row">
+    <div style="font-size:13px;font-weight:600;color:var(--text)">Panel de control</div>
+    <button class="refresh-btn" onclick="loadSupervisor()">↻ Actualizar</button>
+  </div>
+  <div class="sup-summary" id="sup-metrics">
+    <div class="metric-card"><div class="metric-num" id="m-total">—</div><div class="metric-lbl">Vuelos hoy</div></div>
+    <div class="metric-card"><div class="metric-num" id="m-rep">—</div><div class="metric-lbl">Reportados</div></div>
+    <div class="metric-card"><div class="metric-num" id="m-piezas">—</div><div class="metric-lbl">Piezas totales</div></div>
+    <div class="metric-card"><div class="metric-num" id="m-kg">—</div><div class="metric-lbl">Kg totales</div></div>
+  </div>
+  <div id="sup-list"><div class="empty-state"><span class="empty-icon">📋</span>Carga el supervisor para ver reportes.</div></div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal-box">
+    <div class="modal-title">Configurar Google Sheets</div>
+    <div class="modal-sub">Ingresa la URL del Web App de Google Apps Script para sincronizar reportes.</div>
+    <input class="modal-input" id="cfg-script-url" placeholder="https://script.google.com/macros/s/AKfyc.../exec" type="url">
+    <div class="modal-sub" style="margin-top:-4px;margin-bottom:12px">
+      Nombre del conductor (para identificar quién reporta):
+    </div>
+    <input class="modal-input" id="cfg-conductor" placeholder="Ej: Carlos Ruiz" type="text">
+    <button class="modal-save" onclick="saveConfig()">Guardar configuración</button>
+    <button class="modal-cancel" onclick="closeConfig()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────
+let SCRIPT_URL = localStorage.getItem('fa_script_url') || 'https://script.google.com/macros/s/AKfycbyFZlDxdTUgamW5lgi8qjfT0C6ihzm4tMDXQjVWpGR7S_1quCFyLy0S7HWjQKswft3k/exec';
+let CONDUCTOR_NAME = localStorage.getItem('fa_conductor') || '';
+
+// ─── DATOS DE VUELOS (se cargan desde el List manualmente o se editan aquí) ───
+// En producción real estos vendrían de un fetch a la misma sheet de config
+const VUELOS = [
+  {id:'latam1', aerolinea:'LATAM Cargo', tipo:'AEREO', av:'LT',
+   vuelo:'035-08077893', guias:[{num:'035-08077893',piezas:3,kg:41}]},
+  {id:'av1', aerolinea:'AV Carga (Avianca)', tipo:'AEREO', av:'AV',
+   vuelo:'Vuelo 1', guias:[{num:'9753285',piezas:2,kg:23}]},
+  {id:'re1', aerolinea:'Rural Express', tipo:'TERRESTRE', av:'RE',
+   vuelo:'Terrestre', guias:[{num:'20586408',piezas:2,kg:40}]},
+];
+
+// ─── STATE ────────────────────────────────────────────────────
+const reports = JSON.parse(localStorage.getItem('fa_reports') || '{}');
+const selectedEstado = {};
+
+// ─── UTILS ───────────────────────────────────────────────────
+function today(){
+  return new Date().toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+}
+function saveLocal(){
+  localStorage.setItem('fa_reports', JSON.stringify(reports));
+}
+function avatarClass(av){
+  if(av==='LT') return 'av-latam';
+  if(av==='AV') return 'av-avianca';
+  return 'av-other';
+}
+
+// ─── RENDER CONDUCTOR ─────────────────────────────────────────
+function renderConductor(){
+  document.getElementById('date-bar').innerHTML =
+    `<span>📅 ${today()}</span><span class="filter-badge">BOG · Material pendiente</span>`;
+
+  if(!SCRIPT_URL){
+    document.getElementById('setup-banner-conductor').style.display='block';
+  }
+
+  const container = document.getElementById('cards-container');
+  container.innerHTML = '';
+
+  VUELOS.forEach(v => {
+    const r = reports[v.id];
+    const totalPiezas = v.guias.reduce((s,g)=>s+g.piezas,0);
+    const totalKg = v.guias.reduce((s,g)=>s+g.kg,0);
+    const totalGuias = v.guias.length;
+
+    let pillClass='pill-pending', pillText='Pendiente';
+    if(r){
+      if(r.estado==='completo'){pillClass='pill-done';pillText='Recibido ✓';}
+      else if(r.estado==='incompleto'){pillClass='pill-partial';pillText='Incompleto';}
+      else if(r.estado==='nollego'){pillClass='pill-missing';pillText='No llegó';}
+    }
+
+    const guiasHTML = v.guias.map(g=>
+      `<div class="guia-row">
+        <span class="guia-num">${g.num}</span>
+        <span class="guia-detail">${g.piezas} pzas · ${g.kg} kg</span>
+      </div>`
+    ).join('');
+
+    const formDisabled = r ? 'style="opacity:.5;pointer-events:none"' : '';
+    const btnLabel = r ? `✓ ${pillText}` : '📋 Reportar recogida';
+
+    const card = document.createElement('div');
+    card.className='airline-card';
+    card.id=`card-${v.id}`;
+    card.innerHTML=`
+      <div class="card-header">
+        <div class="airline-avatar ${avatarClass(v.av)}">${v.av}</div>
+        <div class="card-info">
+          <div class="airline-name">${v.aerolinea}</div>
+          <div class="flight-num">${v.vuelo}</div>
+        </div>
+        <span class="status-pill ${pillClass}" id="pill-${v.id}">${pillText}</span>
+      </div>
+      <div class="stats-row">
+        <div class="stat-cell"><div class="stat-num">${totalGuias}</div><div class="stat-lbl">Guías</div></div>
+        <div class="stat-cell"><div class="stat-num">${totalPiezas}</div><div class="stat-lbl">Piezas</div></div>
+        <div class="stat-cell"><div class="stat-num">${totalKg}</div><div class="stat-lbl">Kg</div></div>
+      </div>
+      <div class="guias-list">${guiasHTML}</div>
+      <div class="report-area" ${formDisabled}>
+        <button class="toggle-report-btn" onclick="toggleForm('${v.id}')" id="togbtn-${v.id}">
+          ${btnLabel}
+        </button>
+        <div class="report-form" id="form-${v.id}">
+          <div class="form-label" style="margin-top:10px">Tu nombre</div>
+          <input class="conductor-field" id="cond-${v.id}" placeholder="Nombre del conductor" value="${CONDUCTOR_NAME}">
+          <div class="form-label">Estado de la recogida</div>
+          <div class="estado-grid">
+            <button class="estado-btn" id="btn-c-${v.id}" onclick="setEstado('${v.id}','completo')">✓ Completo</button>
+            <button class="estado-btn" id="btn-i-${v.id}" onclick="setEstado('${v.id}','incompleto')">~ Incompleto</button>
+            <button class="estado-btn" id="btn-n-${v.id}" onclick="setEstado('${v.id}','nollego')">✗ No llegó</button>
+          </div>
+          <div class="form-label">Observaciones</div>
+          <textarea class="obs-field" id="obs-${v.id}" rows="2" placeholder="Detalle qué faltó, daños, etc..."></textarea>
+          <div class="form-err" id="err-${v.id}">Selecciona un estado antes de guardar.</div>
+          <button class="submit-btn" id="sub-${v.id}" onclick="submitReport('${v.id}')">Guardar reporte</button>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+function toggleForm(id){
+  const f=document.getElementById(`form-${id}`);
+  const isOpen=f.classList.contains('open');
+  document.querySelectorAll('.report-form').forEach(el=>el.classList.remove('open'));
+  if(!isOpen) f.classList.add('open');
+}
+
+function setEstado(id,estado){
+  selectedEstado[id]=estado;
+  ['completo','incompleto','nollego'].forEach(e=>{
+    const btn=document.getElementById(`btn-${e[0]}-${id}`)||document.getElementById(`btn-${e.slice(0,1)}-${id}`);
+  });
+  document.getElementById(`btn-c-${id}`).className='estado-btn'+(estado==='completo'?' sel-completo':'');
+  document.getElementById(`btn-i-${id}`).className='estado-btn'+(estado==='incompleto'?' sel-incompleto':'');
+  document.getElementById(`btn-n-${id}`).className='estado-btn'+(estado==='nollego'?' sel-nollego':'');
+  document.getElementById(`err-${id}`).style.display='none';
+}
+
+async function submitReport(id){
+  const estado = selectedEstado[id];
+  if(!estado){
+    document.getElementById(`err-${id}`).style.display='block';
+    return;
+  }
+  const obs = document.getElementById(`obs-${id}`).value.trim();
+  const conductor = document.getElementById(`cond-${id}`).value.trim() || 'Sin nombre';
+  const v = VUELOS.find(x=>x.id===id);
+  const totalPiezas = v.guias.reduce((s,g)=>s+g.piezas,0);
+  const totalKg = v.guias.reduce((s,g)=>s+g.kg,0);
+  const ts = new Date().toLocaleString('es-CO');
+
+  const payload = {
+    accion:'reporte',
+    timestamp:ts,
+    conductor,
+    aerolinea:v.aerolinea,
+    vuelo:v.vuelo,
+    guias:v.guias.map(g=>g.num).join(', '),
+    piezas:totalPiezas,
+    kg:totalKg,
+    estado,
+    observaciones:obs
+  };
+
+  const btn = document.getElementById(`sub-${id}`);
+  btn.innerHTML='<span class="spinner"></span>Guardando...';
+  btn.disabled=true;
+
+  // Guardar local siempre
+  reports[id]={estado,obs,conductor,ts};
+  saveLocal();
+
+  // Intentar enviar a Google Sheets si está configurado
+  if(SCRIPT_URL){
+    try{
+      const form = new FormData();
+      form.append('payload', JSON.stringify(payload));
+      await fetch(SCRIPT_URL, {method:'POST', body: form, mode:'no-cors'});
+    }catch(e){
+      console.warn('Sheet sync failed:',e);
+    }
+  }
+
+  // Guardar nombre conductor para siguiente vez
+  if(conductor) localStorage.setItem('fa_conductor', conductor);
+  CONDUCTOR_NAME=conductor;
+
+  renderConductor();
+}
+
+// ─── SUPERVISOR ───────────────────────────────────────────────
+async function loadSupervisor(){
+  if(!SCRIPT_URL){
+    document.getElementById('setup-banner-sup').style.display='block';
+    renderSupervisorLocal();
+    return;
+  }
+  document.getElementById('sup-list').innerHTML='<div class="empty-state"><span class="empty-icon">⏳</span>Cargando reportes...</div>';
+  try{
+    const res = await fetch(`${SCRIPT_URL}?accion=listar&t=${Date.now()}`);
+    const data = await res.json();
+    renderSupervisorData(data.reportes||[]);
+  }catch(e){
+    renderSupervisorLocal();
+  }
+}
+
+function renderSupervisorLocal(){
+  const lista = Object.entries(reports).map(([id,r])=>{
+    const v=VUELOS.find(x=>x.id===id);
+    if(!v) return null;
+    const totalPiezas=v.guias.reduce((s,g)=>s+g.piezas,0);
+    const totalKg=v.guias.reduce((s,g)=>s+g.kg,0);
+    return {aerolinea:v.aerolinea,vuelo:v.vuelo,estado:r.estado,observaciones:r.obs,conductor:r.conductor,timestamp:r.ts,piezas:totalPiezas,kg:totalKg,guias:v.guias.map(g=>g.num).join(', ')};
+  }).filter(Boolean);
+  renderSupervisorData(lista);
+}
+
+function renderSupervisorData(lista){
+  const totalVuelos=VUELOS.length;
+  const totalPiezas=VUELOS.reduce((s,v)=>s+v.guias.reduce((ss,g)=>ss+g.piezas,0),0);
+  const totalKg=VUELOS.reduce((s,v)=>s+v.guias.reduce((ss,g)=>ss+g.kg,0),0);
+
+  document.getElementById('m-total').textContent=totalVuelos;
+  document.getElementById('m-rep').textContent=`${lista.length}/${totalVuelos}`;
+  document.getElementById('m-piezas').textContent=totalPiezas;
+  document.getElementById('m-kg').textContent=`${totalKg}kg`;
+
+  const container=document.getElementById('sup-list');
+  if(lista.length===0){
+    container.innerHTML='<div class="empty-state"><span class="empty-icon">📋</span>Sin reportes aún.<br>El conductor verá las guías y reportará aquí en tiempo real.</div>';
+    return;
+  }
+  const estadoMap={completo:{pill:'pill-done',label:'Recibido ✓'},incompleto:{pill:'pill-partial',label:'Incompleto'},nollego:{pill:'pill-missing',label:'No llegó'}};
+  container.innerHTML=lista.map(r=>{
+    const est=estadoMap[r.estado]||{pill:'pill-pending',label:r.estado};
+    return `<div class="sup-card">
+      <div class="sup-card-top">
+        <div><div class="sup-airline">${r.aerolinea}</div><div class="sup-meta">${r.vuelo} · ${r.piezas} pzas · ${r.kg} kg</div></div>
+        <span class="status-pill ${est.pill}">${est.label}</span>
+      </div>
+      <div class="sup-meta">Guías: ${r.guias}</div>
+      ${r.observaciones?`<div class="sup-obs">💬 ${r.observaciones}</div>`:''}
+      <div class="sup-conductor">👤 ${r.conductor||'—'} · ${r.timestamp||'—'}</div>
+    </div>`;
+  }).join('');
+
+  // Pendientes
+  const reportadosIds=Object.keys(reports);
+  const pendientes=VUELOS.filter(v=>!reportadosIds.includes(v.id));
+  if(pendientes.length>0){
+    container.innerHTML+=`<div style="font-size:11px;color:var(--text-3);padding:8px 4px">Pendiente de reporte: ${pendientes.map(v=>v.aerolinea).join(', ')}</div>`;
+  }
+}
+
+// ─── CONFIG MODAL ─────────────────────────────────────────────
+function openConfig(){
+  document.getElementById('cfg-script-url').value=SCRIPT_URL;
+  document.getElementById('cfg-conductor').value=CONDUCTOR_NAME;
+  document.getElementById('config-modal').classList.add('open');
+}
+function closeConfig(){
+  document.getElementById('config-modal').classList.remove('open');
+}
+function saveConfig(){
+  SCRIPT_URL=document.getElementById('cfg-script-url').value.trim();
+  CONDUCTOR_NAME=document.getElementById('cfg-conductor').value.trim();
+  localStorage.setItem('fa_script_url',SCRIPT_URL);
+  localStorage.setItem('fa_conductor',CONDUCTOR_NAME);
+  closeConfig();
+  document.getElementById('setup-banner-conductor').style.display=SCRIPT_URL?'none':'block';
+  document.getElementById('setup-banner-sup').style.display=SCRIPT_URL?'none':'block';
+  renderConductor();
+}
+
+// ─── TABS ────────────────────────────────────────────────────
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`tab-${t}`).classList.add('active');
+  document.getElementById(`view-${t}`).classList.add('active');
+  if(t==='supervisor') loadSupervisor();
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+renderConductor();
+</script>
+</body>
+</html>
